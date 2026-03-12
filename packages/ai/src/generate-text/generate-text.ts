@@ -22,6 +22,7 @@ import { ModelMessage } from '../prompt';
 import {
   CallSettings,
   getStepTimeoutMs,
+  getToolTimeoutMs,
   getTotalTimeoutMs,
   TimeoutConfiguration,
 } from '../prompt/call-settings';
@@ -447,6 +448,7 @@ export async function generateText<
 
   const totalTimeoutMs = getTotalTimeoutMs(timeout);
   const stepTimeoutMs = getStepTimeoutMs(timeout);
+  const toolTimeoutMs = getToolTimeoutMs(timeout);
   const stepAbortController =
     stepTimeoutMs != null ? new AbortController() : undefined;
   const mergedAbortSignal = mergeAbortSignals(
@@ -568,6 +570,7 @@ export async function generateText<
             telemetry,
             messages: initialMessages,
             abortSignal: mergedAbortSignal,
+            toolTimeoutMs,
             experimental_context,
             stepNumber: 0,
             model: modelInfo,
@@ -993,6 +996,7 @@ export async function generateText<
                   telemetry,
                   messages: stepInputMessages,
                   abortSignal: mergedAbortSignal,
+                  toolTimeoutMs,
                   experimental_context,
                   stepNumber: steps.length,
                   model: stepModelInfo,
@@ -1262,6 +1266,7 @@ async function executeTools<TOOLS extends ToolSet>({
   telemetry,
   messages,
   abortSignal,
+  toolTimeoutMs,
   experimental_context,
   stepNumber,
   model,
@@ -1274,6 +1279,7 @@ async function executeTools<TOOLS extends ToolSet>({
   telemetry: TelemetrySettings | undefined;
   messages: ModelMessage[];
   abortSignal: AbortSignal | undefined;
+  toolTimeoutMs: number | undefined;
   experimental_context: unknown;
   stepNumber: number;
   model: { provider: string; modelId: string };
@@ -1295,6 +1301,7 @@ async function executeTools<TOOLS extends ToolSet>({
         telemetry,
         messages,
         abortSignal,
+        toolTimeoutMs,
         experimental_context,
         stepNumber,
         model,

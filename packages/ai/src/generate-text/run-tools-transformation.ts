@@ -116,6 +116,7 @@ export function runToolsTransformation<TOOLS extends ToolSet>({
   system,
   messages,
   abortSignal,
+  toolTimeoutMs,
   repairToolCall,
   experimental_context,
   generateId,
@@ -131,6 +132,7 @@ export function runToolsTransformation<TOOLS extends ToolSet>({
   system: string | SystemModelMessage | Array<SystemModelMessage> | undefined;
   messages: ModelMessage[];
   abortSignal: AbortSignal | undefined;
+  toolTimeoutMs?: number | undefined;
   repairToolCall: ToolCallRepairFunction<TOOLS> | undefined;
   experimental_context: unknown;
   generateId: IdGenerator;
@@ -340,6 +342,7 @@ export function runToolsTransformation<TOOLS extends ToolSet>({
                 telemetry,
                 messages,
                 abortSignal,
+                toolTimeoutMs,
                 experimental_context,
                 stepNumber,
                 model,
