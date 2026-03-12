@@ -585,6 +585,112 @@ describe('executeToolCall', () => {
     });
   });
 
+  describe('toolTimeoutMs', () => {
+    it('should return tool-result when tool completes before timeout', async () => {
+      const result = await executeToolCall({
+        toolCall: createToolCall(),
+        tools: {
+          testTool: tool({
+            inputSchema: z.object({ value: z.string() }),
+            execute: async ({ value }) => `${value}-result`,
+          }),
+        },
+        tracer,
+        telemetry: undefined,
+        messages: [],
+        abortSignal: undefined,
+        toolTimeoutMs: 5000,
+        experimental_context: undefined,
+      });
+
+      expect(result).toMatchObject({
+        type: 'tool-result',
+        output: 'test-result',
+      });
+    });
+
+    it('should return tool-error when tool exceeds timeout', async () => {
+      const result = await executeToolCall({
+        toolCall: createToolCall(),
+        tools: {
+          testTool: tool({
+            inputSchema: z.object({ value: z.string() }),
+            execute: async (_input, { abortSignal }) => {
+              await new Promise((resolve, reject) => {
+                const timer = setTimeout(resolve, 10000);
+                abortSignal?.addEventListener('abort', () => {
+                  clearTimeout(timer);
+                  reject(abortSignal.reason);
+                });
+              });
+              return 'should-not-reach';
+            },
+          }),
+        },
+        tracer,
+        telemetry: undefined,
+        messages: [],
+        abortSignal: undefined,
+        toolTimeoutMs: 50,
+        experimental_context: undefined,
+      });
+
+      expect(result).toMatchObject({
+        type: 'tool-error',
+        toolCallId: 'call-1',
+        toolName: 'testTool',
+      });
+    });
+
+    it('should merge toolTimeoutMs with existing abortSignal', async () => {
+      const controller = new AbortController();
+
+      const result = await executeToolCall({
+        toolCall: createToolCall(),
+        tools: {
+          testTool: tool({
+            inputSchema: z.object({ value: z.string() }),
+            execute: async ({ value }) => `${value}-result`,
+          }),
+        },
+        tracer,
+        telemetry: undefined,
+        messages: [],
+        abortSignal: controller.signal,
+        toolTimeoutMs: 5000,
+        experimental_context: undefined,
+      });
+
+      expect(result).toMatchObject({
+        type: 'tool-result',
+        output: 'test-result',
+      });
+    });
+
+    it('should not timeout when toolTimeoutMs is undefined', async () => {
+      const result = await executeToolCall({
+        toolCall: createToolCall(),
+        tools: {
+          testTool: tool({
+            inputSchema: z.object({ value: z.string() }),
+            execute: async ({ value }) => `${value}-result`,
+          }),
+        },
+        tracer,
+        telemetry: undefined,
+        messages: [],
+        abortSignal: undefined,
+        toolTimeoutMs: undefined,
+        experimental_context: undefined,
+      });
+
+      expect(result).toMatchObject({
+        type: 'tool-result',
+        output: 'test-result',
+      });
+    });
+  });
+
   describe('dynamic tools', () => {
     it('should set dynamic: true for dynamic tools on success', async () => {
       const { dynamicTool } = await import('@ai-sdk/provider-utils');
