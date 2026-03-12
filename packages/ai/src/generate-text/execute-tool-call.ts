@@ -34,6 +34,7 @@ export async function executeToolCall<TOOLS extends ToolSet>({
   telemetry,
   messages,
   abortSignal,
+  toolTimeoutMs,
   experimental_context,
   stepNumber,
   model,
@@ -47,6 +48,7 @@ export async function executeToolCall<TOOLS extends ToolSet>({
   telemetry: TelemetrySettings | undefined;
   messages: ModelMessage[];
   abortSignal: AbortSignal | undefined;
+  toolTimeoutMs?: number | undefined;
   experimental_context: unknown;
   stepNumber?: number;
   model?: { provider: string; modelId: string };
@@ -100,6 +102,13 @@ export async function executeToolCall<TOOLS extends ToolSet>({
 
       const startTime = now();
 
+      const toolAbortSignal =
+        toolTimeoutMs != null
+          ? abortSignal != null
+            ? AbortSignal.any([abortSignal, AbortSignal.timeout(toolTimeoutMs)])
+            : AbortSignal.timeout(toolTimeoutMs)
+          : abortSignal;
+
       try {
         const stream = executeTool({
           execute: tool.execute!.bind(tool),
@@ -107,7 +116,7 @@ export async function executeToolCall<TOOLS extends ToolSet>({
           options: {
             toolCallId,
             messages,
-            abortSignal,
+            abortSignal: toolAbortSignal,
             experimental_context,
           },
         });
