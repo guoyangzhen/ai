@@ -1,7 +1,6 @@
 import type { LanguageModelV3StreamPart } from '@ai-sdk/provider';
-import type { MappableStreamPart } from './map-stream-part-to-ui-chunks';
-import { mapStreamPartToUIChunks } from './map-stream-part-to-ui-chunks';
-import type { UIMessageChunk } from './ui-message-chunks';
+import type { UIMessageChunk } from 'ai';
+import { mapStreamPartToUIChunks, type MappableStreamPart } from 'ai/internal';
 
 /**
  * Options for creating the provider stream to UI chunk transform.
@@ -16,12 +15,6 @@ export interface ProviderStreamToUIChunkTransformOptions {
    * The message ID to include in the start chunk.
    */
   messageId?: string;
-
-  /**
-   * Whether to include raw chunks in the output.
-   * @default false
-   */
-  includeRawChunks?: boolean;
 }
 
 /**
@@ -39,17 +32,12 @@ function uint8ArrayToBase64(data: Uint8Array): string {
 /**
  * Normalize a LanguageModelV3StreamPart to the MappableStreamPart interface
  * so it can be processed by the shared mapStreamPartToUIChunks function.
- *
- * This bridges the field-name differences between V3 stream parts and
- * the normalized interface (e.g., file.data → file.url, tool-result.result → .output,
- * tool-call.input string → parsed object).
  */
 function normalizeV3Part(
   part: LanguageModelV3StreamPart,
 ): MappableStreamPart | null {
   switch (part.type) {
     case 'file': {
-      // Convert raw data to a URL string
       let url: string;
       const fileData = part.data;
       if (fileData instanceof Uint8Array) {
@@ -68,7 +56,6 @@ function normalizeV3Part(
     }
 
     case 'tool-call': {
-      // V3 tool-call has input as JSON string; normalize to parsed object
       // TODO: replace JSON.parse with parseJSON from @ai-sdk/provider-utils
       return {
         type: 'tool-call',
@@ -82,7 +69,6 @@ function normalizeV3Part(
     }
 
     case 'tool-result': {
-      // V3 uses .result; normalized uses .output
       return {
         type: 'tool-result',
         toolCallId: part.toolCallId,
@@ -90,7 +76,7 @@ function normalizeV3Part(
       };
     }
 
-    // These types are structurally compatible — pass through directly
+    // Structurally compatible — pass through
     case 'text-start':
     case 'text-delta':
     case 'text-end':
@@ -122,8 +108,7 @@ function normalizeV3Part(
  * to UIMessageChunk chunks.
  *
  * Internally normalizes V3 stream parts and delegates to the shared
- * `mapStreamPartToUIChunks` function, which is also used by
- * `streamText`'s `toUIMessageStream()`.
+ * mapStreamPartToUIChunks function from the ai package.
  */
 export function createProviderStreamToUIChunkTransform(
   options?: ProviderStreamToUIChunkTransformOptions,
