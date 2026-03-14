@@ -290,7 +290,6 @@ export async function* streamTextIterator({
         ...(stepUIChunks ?? []),
       ];
 
-      // Normalize finishReason - AI SDK v6 returns { unified, raw }, v5 returns a string
       const finishReason = normalizeFinishReason(finish?.finishReason);
 
       if (finishReason === 'tool-calls') {
@@ -466,18 +465,12 @@ function filterToolSet(tools: ToolSet, activeTools: string[]): ToolSet {
 }
 
 /**
- * Normalize finishReason from different AI SDK versions.
- * - AI SDK v6: returns { unified: 'tool-calls', raw: 'tool_use' }
- * - AI SDK v5: returns 'tool-calls' string directly
+ * Extract the unified finish reason from a LanguageModelV3FinishReason.
  */
-function normalizeFinishReason(raw: unknown): FinishReason | undefined {
-  if (raw == null) return undefined;
-  if (typeof raw === 'string') return raw as FinishReason;
-  if (typeof raw === 'object') {
-    const obj = raw as { unified?: FinishReason; type?: FinishReason };
-    return obj.unified ?? obj.type ?? 'other';
-  }
-  return undefined;
+function normalizeFinishReason(
+  finishReason: { unified: FinishReason; raw: string | undefined } | undefined,
+): FinishReason | undefined {
+  return finishReason?.unified;
 }
 
 /**
