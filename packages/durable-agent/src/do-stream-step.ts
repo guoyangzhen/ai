@@ -3,9 +3,9 @@ import type {
   LanguageModelV3Prompt,
   LanguageModelV3StreamPart,
   LanguageModelV3ToolCall,
-  LanguageModelV3ToolChoice,
   SharedV3ProviderOptions,
 } from '@ai-sdk/provider';
+import { convertUint8ArrayToBase64 } from '@ai-sdk/provider-utils';
 import {
   type FinishReason,
   gateway,
@@ -16,6 +16,7 @@ import {
   type ToolSet,
   type UIMessageChunk,
 } from 'ai';
+import { toLanguageModelToolChoice } from 'ai/internal';
 import { createProviderStreamToUIChunkTransform } from './create-provider-stream-to-ui-chunk-transform.js';
 import type {
   ProviderOptions,
@@ -36,18 +37,6 @@ export interface ProviderExecutedToolResult {
   toolName: string;
   result: unknown;
   isError?: boolean;
-}
-
-/**
- * Convert a Uint8Array to a base64 string safely.
- * Used by chunksToStep for file chunk conversion.
- */
-function uint8ArrayToBase64(data: Uint8Array): string {
-  let binary = '';
-  for (let i = 0; i < data.length; i++) {
-    binary += String.fromCharCode(data[i]);
-  }
-  return btoa(binary);
 }
 
 /**
@@ -77,30 +66,6 @@ export interface DoStreamStepOptions {
    * This is used by DurableAgent when collectUIMessages is enabled.
    */
   collectUIChunks?: boolean;
-}
-
-/**
- * Convert AI SDK ToolChoice to LanguageModelV3ToolChoice
- */
-function toLanguageModelToolChoice(
-  toolChoice: ToolChoice<ToolSet> | undefined,
-): LanguageModelV3ToolChoice | undefined {
-  if (toolChoice === undefined) {
-    return undefined;
-  }
-  if (toolChoice === 'auto') {
-    return { type: 'auto' };
-  }
-  if (toolChoice === 'none') {
-    return { type: 'none' };
-  }
-  if (toolChoice === 'required') {
-    return { type: 'required' };
-  }
-  if (typeof toolChoice === 'object' && toolChoice.type === 'tool') {
-    return { type: 'tool', toolName: toolChoice.toolName };
-  }
-  return undefined;
 }
 
 export async function doStreamStep(
@@ -315,7 +280,7 @@ function chunksToStep(
       // If data is already a Uint8Array, convert to base64; otherwise use as-is
       if (data instanceof Uint8Array) {
         // Convert Uint8Array to base64 string
-        const base64 = uint8ArrayToBase64(data);
+        const base64 = convertUint8ArrayToBase64(data);
         return {
           mediaType: chunk.mediaType,
           base64,

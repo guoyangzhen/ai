@@ -4,13 +4,14 @@ import type {
   LanguageModelV3ToolCall,
   LanguageModelV3ToolResultPart,
 } from '@ai-sdk/provider';
-import type {
-  FinishReason,
-  StepResult,
-  StreamTextOnStepFinishCallback,
-  ToolChoice,
-  ToolSet,
-  UIMessageChunk,
+import {
+  isStopConditionMet,
+  type FinishReason,
+  type StepResult,
+  type StreamTextOnStepFinishCallback,
+  type ToolChoice,
+  type ToolSet,
+  type UIMessageChunk,
 } from 'ai';
 import {
   doStreamStep,
@@ -354,7 +355,12 @@ export async function* streamTextIterator({
           const stopConditionList = Array.isArray(stopConditions)
             ? stopConditions
             : [stopConditions];
-          if (stopConditionList.some(test => test({ steps }))) {
+          if (
+            await isStopConditionMet({
+              stopConditions: stopConditionList,
+              steps,
+            })
+          ) {
             done = true;
           }
         }
