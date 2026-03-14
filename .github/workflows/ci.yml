@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - release-v*
+      - gr2m/durable-agent
 
 jobs:
   build-examples:
