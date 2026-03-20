@@ -193,7 +193,29 @@ export async function convertToModelMessages<UI_MESSAGE extends UIMessage>(
                     input:
                       part.state === 'output-error'
                         ? (part.input ??
-                          ('rawInput' in part ? part.rawInput : undefined))
+                          (() => {
+                            if ('rawInput' in part && part.rawInput != null) {
+                              if (
+                                typeof part.rawInput === 'object' &&
+                                !Array.isArray(part.rawInput)
+                              ) {
+                                return part.rawInput;
+                              }
+                              if (typeof part.rawInput === 'string') {
+                                try {
+                                  const parsed = JSON.parse(part.rawInput);
+                                  if (
+                                    typeof parsed === 'object' &&
+                                    parsed != null &&
+                                    !Array.isArray(parsed)
+                                  ) {
+                                    return parsed;
+                                  }
+                                } catch {}
+                              }
+                            }
+                            return undefined;
+                          })())
                         : part.input,
                     providerExecuted: part.providerExecuted,
                     ...(part.callProviderMetadata != null
